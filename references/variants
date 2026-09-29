@@ -1,0 +1,56 @@
+# 变体写法
+
+## 1. 选项不等宽：JS 测量滑块位置
+
+纯 CSS 的 `translateX(i * 100%)` 只适用于等宽。文字长短不一时，测量当前选中 label 的位置与宽度，写入 CSS 变量：
+
+```html
+<div class="switch" id="sw"> <span class="thumb"></span> …radio + label… </div>
+```
+
+```css
+.thumb {
+  position: absolute; top: 4px; bottom: 4px; left: 0;
+  width: var(--w, 0px);
+  transform: translateX(var(--x, 0px));
+  transition: transform .5s cubic-bezier(.34,1.4,.64,1), width .5s cubic-bezier(.34,1.4,.64,1);
+}
+```
+
+```js
+const sw = document.getElementById('sw');
+function place() {
+  const on = sw.querySelector('input:checked + label');
+  if (!on) return;
+  sw.style.setProperty('--x', on.offsetLeft + 'px');
+  sw.style.setProperty('--w', on.offsetWidth + 'px');
+}
+sw.addEventListener('change', place);
+addEventListener('resize', place);
+document.fonts?.ready.then(place);   // 字体加载后宽度会变，需要重算
+place();
+```
+
+注意：首次 `place()` 时给 `.thumb` 临时加 `transition: none`，避免页面加载时滑块从 0 滑入。
+
+## 2. 竖向切换（侧边栏）
+
+把 `.switch` 改为 `grid-template-rows: repeat(var(--n), 1fr)`，滑块用
+`transform: translateY(calc(var(--i) * 100%))`，高度取 `calc((100% - 8px) / var(--n))`。
+
+## 3. 图标 / 角标
+
+- label 内放 `<svg>` 或 emoji，用 `display:inline-flex; gap:6px; justify-content:center`。
+- "省 20%" 之类的角标放在 label 内 `position:absolute; top:-8px; right:8px`，不要放进 thumb，避免随滑块位移。
+
+## 4. 月付 / 年付（2 选项）
+
+`--n: 2`，面板可只保留价格数字并用相同的 grid 叠放技巧；价格数字想要"滚动"效果时，
+将每个价格放进 `overflow:hidden` 的单行容器，用 `translateY(calc(var(--i) * -100%))` 位移。
+
+## 5. 常见坑
+
+- 动画 `left` / `width` 会触发布局，掉帧；改用 `transform`。
+- 面板用 `display:none` 切换没有过渡；用 `visibility` + `opacity`，并给 `visibility` 设延迟。
+- 面板没叠在同一 grid 格里，高度不同会让下方内容跳动。
+- 忘了 `:focus-visible`，键盘用户看不到当前焦点。
