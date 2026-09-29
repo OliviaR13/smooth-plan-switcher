@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>丝滑方案切换组件</title>
+<style>
+  :root {
+    --bg: #f3f4f8;
+    --card: #ffffff;
+    --track: #e6e8ef;
+    --thumb: #ffffff;
+    --thumb-shadow: 0 2px 6px rgba(20, 24, 40, .12), 0 1px 2px rgba(20, 24, 40, .08);
+    --text: #1c2030;
+    --muted: #7a8194;
+    --accent: #5b6cff;
+    --ease-spring: cubic-bezier(.34, 1.4, .64, 1);
+    --ease-out: cubic-bezier(.22, 1, .36, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1117; --card: #171a23; --track: #232733; --thumb: #33394a;
+      --thumb-shadow: 0 2px 8px rgba(0, 0, 0, .5);
+      --text: #eef0f6; --muted: #8b93a7; --accent: #7f8cff;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1117; --card: #171a23; --track: #232733; --thumb: #33394a;
+    --thumb-shadow: 0 2px 8px rgba(0, 0, 0, .5);
+    --text: #eef0f6; --muted: #8b93a7; --accent: #7f8cff;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; display: grid; place-items: center; padding: 24px;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+  }
+
+  .demo { --n: 3; --i: 0; width: min(100%, 420px); }
+  .demo:has(#p1:checked) { --i: 0; }
+  .demo:has(#p2:checked) { --i: 1; }
+  .demo:has(#p3:checked) { --i: 2; }
+
+  /* ---------- 切换器 ---------- */
+  .switch {
+    position: relative; display: grid; grid-template-columns: repeat(var(--n), 1fr);
+    padding: 4px; border-radius: 999px; background: var(--track);
+    isolation: isolate;
+  }
+  .switch input { position: absolute; opacity: 0; pointer-events: none; }
+  .switch label {
+    position: relative; z-index: 1; padding: 10px 0; text-align: center;
+    font-size: 14px; font-weight: 600; color: var(--muted);
+    cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent;
+    transition: color .3s var(--ease-out);
+  }
+  .switch label:hover { color: var(--text); }
+  .switch input:checked + label { color: var(--text); }
+
+  .thumb {
+    position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 4px;
+    width: calc((100% - 8px) / var(--n));
+    border-radius: 999px; background: var(--thumb); box-shadow: var(--thumb-shadow);
+    transform: translateX(calc(var(--i) * 100%));
+    transition: transform .5s var(--ease-spring);
+    will-change: transform;
+  }
+  .switch:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  /* ---------- 内容面板：叠放在同一格，避免高度跳动 ---------- */
+  .panels { display: grid; margin-top: 16px; }
+  .panel {
+    grid-area: 1 / 1; background: var(--card); border-radius: 20px; padding: 24px;
+    box-shadow: 0 1px 2px rgba(20, 24, 40, .06), 0 8px 24px rgba(20, 24, 40, .06);
+    opacity: 0; transform: translateY(10px) scale(.985); visibility: hidden; pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease, visibility 0s .25s;
+  }
+  .demo:has(#p1:checked) .panel[data-p="1"],
+  .demo:has(#p2:checked) .panel[data-p="2"],
+  .demo:has(#p3:checked) .panel[data-p="3"] {
+    opacity: 1; transform: none; visibility: visible; pointer-events: auto;
+    transition: opacity .4s ease .08s, transform .5s var(--ease-out) .08s, visibility 0s;
+  }
+  .panel h2 { margin: 0 0 4px; font-size: 18px; }
+  .price { margin: 12px 0 16px; font-size: 40px; font-weight: 700; letter-spacing: -.02em; }
+  .price small { font-size: 14px; font-weight: 500; color: var(--muted); }
+  .panel ul { margin: 0 0 20px; padding: 0; list-style: none; display: grid; gap: 10px; color: var(--muted); font-size: 14px; }
+  .panel li::before { content: "✓"; margin-right: 8px; color: var(--accent); font-weight: 700; }
+  .cta {
+    width: 100%; padding: 12px; border: 0; border-radius: 12px; cursor: pointer;
+    background: var(--accent); color: #fff; font-size: 15px; font-weight: 600;
+    transition: transform .2s var(--ease-spring), filter .2s;
+  }
+  .cta:hover { filter: brightness(1.08); }
+  .cta:active { transform: scale(.97); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .thumb, .panel, .switch label { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <!-- 改选项数：同步修改 --n、radio/label、:has 规则、面板 -->
+  <div class="demo">
+    <div class="switch" role="radiogroup" aria-label="选择方案">
+      <span class="thumb" aria-hidden="true"></span>
+      <input type="radio" name="plan" id="p1" checked><label for="p1">个人版</label>
+      <input type="radio" name="plan" id="p2"><label for="p2">团队版</label>
+      <input type="radio" name="plan" id="p3"><label for="p3">企业版</label>
+    </div>
+
+    <div class="panels">
+      <section class="panel" data-p="1">
+        <h2>个人版</h2><div>适合独立使用</div>
+        <div class="price">¥0<small> / 月</small></div>
+        <ul><li>基础功能</li><li>1 个项目</li><li>社区支持</li></ul>
+        <button class="cta">开始使用</button>
+      </section>
+      <section class="panel" data-p="2">
+        <h2>团队版</h2><div>适合小团队协作</div>
+        <div class="price">¥49<small> / 月</small></div>
+        <ul><li>全部基础功能</li><li>10 个项目</li><li>成员协作与权限</li><li>邮件支持</li></ul>
+        <button class="cta">升级团队版</button>
+      </section>
+      <section class="panel" data-p="3">
+        <h2>企业版</h2><div>适合大型组织</div>
+        <div class="price">联系我们</div>
+        <ul><li>无限项目</li><li>单点登录 SSO</li><li>专属客户经理</li></ul>
+        <button class="cta">联系销售</button>
+      </section>
+    </div>
+  </div>
+</body>
+</html>
